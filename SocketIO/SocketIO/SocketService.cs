@@ -41,38 +41,36 @@ namespace SocketIO
         public SocketService(string server, string userToken = "5601ab2d299cfb5a7698566158fcb2bc350701b9ac77b6f72e52c260fab0da57") : this(server)
         {
             UserToken = userToken;
-        }
-
-        public SocketService(string server)
-        {
             EventsDictionary = new ConcurrentDictionary<string, object>();
-        System.Net.ServicePointManager.ServerCertificateValidationCallback = ValidateCert;
+            System.Net.ServicePointManager.ServerCertificateValidationCallback = ValidateCert;
             var options = new IO.Options()
             {
                 AutoConnect = true,
-                ExtraHeaders = new Dictionary<string, string>() {{"Authorization", UserToken}},
-                IgnoreServerCertificateValidation = true,
+                //ExtraHeaders = new Dictionary<string, string>() { { authToken, UserToken } },
                 Reconnection = true,
                 ReconnectionDelay = 10,
 
             };
-            //Transports = ImmutableList.Create<string>( Polling.NAME)
+            options.Transports = ImmutableList.Create<string>(Polling.NAME);
 
             socket = IO.Socket(server, options);
             socket.On(Socket.EVENT_CONNECT, () =>
             {
-                
-                socket.Emit("/v1/login");
+
+                socket.Emit($"/v1/login/{UserToken}");
 
 
-                
+
 
             });
-            socket.On(Socket.EVENT_DISCONNECT, () => Debug.WriteLine("Disconnecting"));
+            socket.On(Socket.EVENT_DISCONNECT, () =>
+                Debug.WriteLine("Disconnecting")
+            );
             socket.On(
                 Socket.EVENT_ERROR, ErrorLog);
             socket.On("hi", (data) =>
             {
+                
                 Debug.WriteLine(data);
                 socket.Disconnect();
             });
@@ -85,6 +83,11 @@ namespace SocketIO
             socket.On(Socket.EVENT_RECONNECT_ATTEMPT, () => Debug.WriteLine("Attempting reconnect"));
             socket.On(Socket.EVENT_RECONNECT_ERROR, ErrorLog);
             socket.On(Socket.EVENT_RECONNECT_FAILED, () => Debug.WriteLine("Reconnect failed"));
+        }
+
+        public SocketService(string server)
+        {
+          
             //socket.On(Socket, n() {
             //    public void call(Object...args)
             //    {
@@ -103,6 +106,7 @@ namespace SocketIO
             //});
         }
 
+        public string authToken { get; private set; } = "AuthToken";
         protected void MapEventsActions()
         {
             if (socket != null)
